@@ -1,105 +1,127 @@
-﻿using SistemaControlServiciosLimpieza.API.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Api.Data;
+using SistemaControlServiciosLimpieza.Api.Models.Entities;
+using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
-
     [ApiController]
     [Route("api/empleados")]
     public class EmpleadosController : ControllerBase
     {
-        private static readonly List<Empleado> _empleados = new List<Empleado>
-        {
-            new Empleado { Id = 1, Name = "Carlos Rodríguez", Phone = "809-555-1234", Email = "carlos@example.com", Position = "Supervisor", IsActive = true },
-            new Empleado { Id = 2, Name = "Ana Martínez", Phone = "829-555-5678", Email = "ana@example.com", Position = "Limpieza", IsActive = true },
-            new Empleado { Id = 3, Name = "Luis García", Phone = "849-555-9012", Email = "luis@example.com", Position = "Coordinador", IsActive = true }
-        };
+        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
 
-        [HttpGet] // GET: api/empleados
-        public ActionResult<IEnumerable<Empleado>> GetAll()
+        public EmpleadosController(ApplicationDbContext context)
         {
-            // Retornamos 200 OK con la lista completa.
-            return Ok(_empleados);
+            _context = context;
+            // Nota: No inicializamos lista estática, los datos están en la BD.
         }
 
-        [HttpGet("{id}")] // GET: api/empleados/5
-        public ActionResult<Empleado> GetById(int id)
+        // GET: api/empleados
+        [HttpGet]
+        public ActionResult<List<EmpleadoDto>> GetAll()
         {
-            var empleado = _empleados.FirstOrDefault(e => e.Id == id);
+            // Recupera los empleados (entidades) de la base de datos
+            var empleados = _context.Empleados.ToList();
+
+            // Mapeo manual de entidades Empleado a DTOs EmpleadoDto
+            var empleadoDtos = empleados.Select(e => new EmpleadoDto
+            {
+                Id = e.Id,
+                Name = e.Name,
+                Phone = e.Phone,
+                Email = e.Email,
+                Position = e.Position,
+                IsActive = e.IsActive
+            }).ToList();
+
+            return Ok(empleadoDtos);
+        }
+
+        // GET: api/empleados/{id}
+        [HttpGet("{id}")]
+        public ActionResult<EmpleadoDto> GetById(int id)
+        {
+            var empleado = _context.Empleados.Find(id);
 
             if (empleado == null)
-            {
-                // Retornar 404 si no se encontró
                 return NotFound();
-            }
 
-            return Ok(empleado);
+            // Mapeo de la entidad encontrada a DTO
+            var empleadoDto = new EmpleadoDto
+            {
+                Id = empleado.Id,
+                Name = empleado.Name,
+                Phone = empleado.Phone,
+                Email = empleado.Email,
+                Position = empleado.Position,
+                IsActive = empleado.IsActive
+            };
+
+            return Ok(empleadoDto);
         }
 
-        [HttpPost] // POST: api/empleados
-        public ActionResult<Empleado> Create(Empleado empleado)
+        // POST: api/empleados
+        [HttpPost]
+        public ActionResult<Empleado> Create([FromBody] CreateEmpleadoDto request)
         {
-            // Validación manual adicional: nombre no vacío (alternativa a [Required]).
-            if (string.IsNullOrWhiteSpace(empleado.Name))
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("El nombre del empleado es obligatorio.");
+
+            var empleado = new Empleado
             {
-                return BadRequest("Name of employee is required.");
-            }
+                Name = request.Name,
+                Phone = request.Phone,
+                Email = request.Email,
+                Position = request.Position,
+                IsActive = true
+            };
 
-            int newId = _empleados.Any() ? _empleados.Max(e => e.Id) + 1 : 1;
-            empleado.Id = newId;
+            _context.Empleados.Add(empleado);
+            _context.SaveChanges();
 
-            if (empleado.IsActive == false)
-            {
-                // Por lógica de negocio, podríamos decidir que todo nuevo empleado inicia activo.
-                empleado.IsActive = true;
-            }
-
-            _empleados.Add(empleado);
-
-            // Devolver respuesta 201 Created con el recurso creado
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = empleado.Id },
-                empleado
-            );
+            return Ok(new { empleado.Id });
         }
 
-        [HttpPut("{id}")] // PUT: api/empleados/5
-        public IActionResult Update(int id, Empleado empleado)
+        // PUT: api/empleados/5
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, [FromBody] EmpleadoDto request)
         {
-            var existing = _empleados.FirstOrDefault(e => e.Id == id);
+            if (id != request.Id)
+                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
 
-            if (existing == null)
-            {
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("El nombre del empleado no puede estar vacío.");
+
+            var existingEmpleado = _context.Empleados.Find(id);
+
+            if (existingEmpleado == null)
                 return NotFound();
-            }
 
-            // Opcional: validar que empleado.Id == id si quisiéramos forzar consistencia.
-            // Actualizar propiedades (excepto el Id)
-            existing.Name = empleado.Name;
-            existing.Phone = empleado.Phone;
-            existing.Email = empleado.Email;
-            existing.Position = empleado.Position;
-            existing.IsActive = empleado.IsActive;
+            existingEmpleado.Name = request.Name;
+            existingEmpleado.Phone = request.Phone;
+            existingEmpleado.Email = request.Email;
+            existingEmpleado.Position = request.Position;
+            existingEmpleado.IsActive = request.IsActive;
 
-            // Retornar 204 NoContent indicando que se realizó la operación sin devolver cuerpo.
+            _context.SaveChanges();
+
             return NoContent();
         }
 
-        [HttpDelete("{id}")] // DELETE: api/empleados/5
+        // DELETE: api/empleados/5
+        [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var existing = _empleados.FirstOrDefault(e => e.Id == id);
+            var empleado = _context.Empleados.Find(id);
 
-            if (existing == null)
-            {
+            if (empleado == null)
                 return NotFound();
-            }
 
-            _empleados.Remove(existing);
+            _context.Empleados.Remove(empleado);
+            _context.SaveChanges();
 
-            // Retornamos 204 NoContent para indicar que se eliminó correctamente (sin contenido).
             return NoContent();
         }
     }

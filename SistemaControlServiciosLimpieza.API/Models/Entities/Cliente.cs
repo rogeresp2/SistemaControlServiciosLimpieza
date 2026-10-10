@@ -1,4 +1,4 @@
-﻿namespace SistemaControlServiciosLimpieza.API.Models.Entities
+﻿namespace SistemaControlServiciosLimpieza.Api.Models.Entities
 {
     public class Cliente
     {

@@ -1,6 +1,6 @@
 @SistemaControlServiciosLimpieza.API_HostAddress = http://localhost:5167
 
-GET {{SistemaControlServiciosLimpieza.API_HostAddress}}/weatherforecast/
+GET {{SistemaControlServiciosLimpieza.API_HostAddress}}
 Accept: application/json
 
 ###
