@@ -1,91 +1,153 @@
-﻿using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Api.Data;
+using SistemaControlServiciosLimpieza.Api.Models.Entities;
+using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
-
     [ApiController]
     [Route("api/asignaciones")]
     public class AsignacionesController : ControllerBase
     {
-        private static readonly List<Asignacion> _asignaciones = new List<Asignacion>
-        {
-            new Asignacion { Id = 1, ServicioId = 1, EmpleadoId = 2, AssignmentDate = new DateTime(2026, 10, 9), Status = "Pendiente" },
-            new Asignacion { Id = 2, ServicioId = 2, EmpleadoId = 1, AssignmentDate = new DateTime(2026, 10, 9), Status = "En proceso" },
-            new Asignacion { Id = 3, ServicioId = 3, EmpleadoId = 3, AssignmentDate = new DateTime(2026, 10, 9), Status = "Completada" }
-        };
+        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
 
-        [HttpGet] // GET: api/asignaciones
-        public ActionResult<IEnumerable<Asignacion>> GetAll()
+        public AsignacionesController(ApplicationDbContext context)
         {
-            // Retornamos 200 OK con la lista completa.
-            return Ok(_asignaciones);
+            _context = context;
+            // Nota: No inicializamos lista estática, los datos están en la BD.
         }
 
-        [HttpGet("{id}")] // GET: api/asignaciones/5
-        public ActionResult<Asignacion> GetById(int id)
+        // GET: api/asignaciones
+        [HttpGet]
+        public ActionResult<List<AsignacionDto>> GetAll()
         {
-            var asignacion = _asignaciones.FirstOrDefault(a => a.Id == id);
+            // Recupera las asignaciones (entidades) de la base de datos
+            var asignaciones = _context.Asignaciones.ToList();
+
+            // Mapeo manual de entidades Asignacion a DTOs AsignacionDto
+            var asignacionDtos = asignaciones.Select(a => new AsignacionDto
+            {
+                Id = a.Id,
+                ServicioId = a.ServicioId,
+                EmpleadoId = a.EmpleadoId,
+                AssignmentDate = a.AssignmentDate,
+                Status = a.Status
+            }).ToList();
+
+            return Ok(asignacionDtos);
+        }
+
+        // GET: api/asignaciones/{id}
+        [HttpGet("{id}")]
+        public ActionResult<AsignacionDto> GetById(int id)
+        {
+            var asignacion = _context.Asignaciones.Find(id);
 
             if (asignacion == null)
-            {
-                // Retornar 404 si no se encontró
                 return NotFound();
-            }
 
-            return Ok(asignacion);
+            // Mapeo de la entidad encontrada a DTO
+            var asignacionDto = new AsignacionDto
+            {
+                Id = asignacion.Id,
+                ServicioId = asignacion.ServicioId,
+                EmpleadoId = asignacion.EmpleadoId,
+                AssignmentDate = asignacion.AssignmentDate,
+                Status = asignacion.Status
+            };
+
+            return Ok(asignacionDto);
         }
 
-        [HttpPost] // POST: api/asignaciones
-        public ActionResult<Asignacion> Create(Asignacion asignacion)
+        // GET /api/asignaciones/con-detalles
+        [HttpGet("con-detalles")]
+        public ActionResult<List<AsignacionWithDetailsDto>> GetAsignacionesWithDetails()
         {
-            int newId = _asignaciones.Any() ? _asignaciones.Max(a => a.Id) + 1 : 1;
-            asignacion.Id = newId;
+            var asignaciones = _context.Asignaciones
+                .Include(a => a.Servicio)
+                .Include(a => a.Empleado)
+                .ToList();
 
-            _asignaciones.Add(asignacion);
+            // Mapeo manual de entidades Asignacion a DTOs AsignacionWithDetailsDto
+            var asignacionDTOs = asignaciones.Select(a => new AsignacionWithDetailsDto
+            {
+                Id = a.Id,
+                ServicioId = a.ServicioId,
+                ServicioName = a.Servicio != null ? a.Servicio.Name : "",
+                EmpleadoId = a.EmpleadoId,
+                EmpleadoName = a.Empleado != null ? a.Empleado.Name : "",
+                AssignmentDate = a.AssignmentDate,
+                Status = a.Status
+            }).ToList();
 
-            // Devolver respuesta 201 Created con el recurso creado
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = asignacion.Id },
-                asignacion
-            );
+            return Ok(asignacionDTOs);
         }
 
-        [HttpPut("{id}")] // PUT: api/asignaciones/5
-        public IActionResult Update(int id, Asignacion asignacion)
+        // POST: api/asignaciones
+        [HttpPost]
+        public ActionResult<Asignacion> Create([FromBody] CreateAsignacionDto request)
         {
-            var existing = _asignaciones.FirstOrDefault(a => a.Id == id);
+            if (!_context.Servicios.Any(s => s.Id == request.ServicioId))
+                return BadRequest("El servicio indicado no existe.");
 
-            if (existing == null)
+            if (!_context.Empleados.Any(e => e.Id == request.EmpleadoId))
+                return BadRequest("El empleado indicado no existe.");
+
+            var asignacion = new Asignacion
             {
+                ServicioId = request.ServicioId,
+                EmpleadoId = request.EmpleadoId,
+                AssignmentDate = request.AssignmentDate,
+                Status = request.Status
+            };
+
+            _context.Asignaciones.Add(asignacion);
+            _context.SaveChanges();
+
+            return Ok(new { asignacion.Id });
+        }
+
+        // PUT: api/asignaciones/5
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, [FromBody] AsignacionDto request)
+        {
+            if (id != request.Id)
+                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
+
+            if (!_context.Servicios.Any(s => s.Id == request.ServicioId))
+                return BadRequest("El servicio indicado no existe.");
+
+            if (!_context.Empleados.Any(e => e.Id == request.EmpleadoId))
+                return BadRequest("El empleado indicado no existe.");
+
+            var existingAsignacion = _context.Asignaciones.Find(id);
+
+            if (existingAsignacion == null)
                 return NotFound();
-            }
 
-            // Actualizar propiedades (excepto el Id)
-            existing.ServicioId = asignacion.ServicioId;
-            existing.EmpleadoId = asignacion.EmpleadoId;
-            existing.AssignmentDate = asignacion.AssignmentDate;
-            existing.Status = asignacion.Status;
+            existingAsignacion.ServicioId = request.ServicioId;
+            existingAsignacion.EmpleadoId = request.EmpleadoId;
+            existingAsignacion.AssignmentDate = request.AssignmentDate;
+            existingAsignacion.Status = request.Status;
 
-            // Retornar 204 NoContent indicando que se realizó la operación sin devolver cuerpo.
+            _context.SaveChanges();
+
             return NoContent();
         }
 
-        [HttpDelete("{id}")] // DELETE: api/asignaciones/5
+        // DELETE: api/asignaciones/5
+        [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var existing = _asignaciones.FirstOrDefault(a => a.Id == id);
+            var asignacion = _context.Asignaciones.Find(id);
 
-            if (existing == null)
-            {
+            if (asignacion == null)
                 return NotFound();
-            }
 
-            _asignaciones.Remove(existing);
+            _context.Asignaciones.Remove(asignacion);
+            _context.SaveChanges();
 
-            // Retornamos 204 NoContent para indicar que se eliminó correctamente.
             return NoContent();
         }
     }

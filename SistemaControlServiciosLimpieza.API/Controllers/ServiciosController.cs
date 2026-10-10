@@ -1,98 +1,156 @@
-﻿using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Api.Data;
+using SistemaControlServiciosLimpieza.Api.Models.Entities;
+using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
-
     [ApiController]
     [Route("api/servicios")]
     public class ServiciosController : ControllerBase
     {
-        private static readonly List<Servicio> _servicios = new List<Servicio>
-        {
-            new Servicio { Id = 1, Name = "Limpieza residencial", ServiceDate = new DateTime(2026, 10, 10), Cost = 2500.00m, Status = "Pendiente", ClienteId = 1 },
-            new Servicio { Id = 2, Name = "Limpieza de oficina", ServiceDate = new DateTime(2026, 10, 12), Cost = 4500.00m, Status = "En proceso", ClienteId = 2 },
-            new Servicio { Id = 3, Name = "Limpieza profunda", ServiceDate = new DateTime(2026, 10, 15), Cost = 3500.00m, Status = "Completado", ClienteId = 1 }
-        };
+        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
 
-        [HttpGet] // GET: api/servicios
-        public ActionResult<IEnumerable<Servicio>> GetAll()
+        public ServiciosController(ApplicationDbContext context)
         {
-            // Retornamos 200 OK con la lista completa.
-            return Ok(_servicios);
+            _context = context;
+            // Nota: No inicializamos lista estática, los datos están en la BD.
         }
 
-        [HttpGet("{id}")] // GET: api/servicios/5
-        public ActionResult<Servicio> GetById(int id)
+        // GET: api/servicios
+        [HttpGet]
+        public ActionResult<List<ServicioDto>> GetAll()
         {
-            var servicio = _servicios.FirstOrDefault(s => s.Id == id);
+            // Recupera los servicios (entidades) de la base de datos
+            var servicios = _context.Servicios.ToList();
+
+            // Mapeo manual de entidades Servicio a DTOs ServicioDto
+            var servicioDtos = servicios.Select(s => new ServicioDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                ServiceDate = s.ServiceDate,
+                Cost = s.Cost,
+                Status = s.Status,
+                ClienteId = s.ClienteId
+            }).ToList();
+
+            return Ok(servicioDtos);
+        }
+
+        // GET: api/servicios/{id}
+        [HttpGet("{id}")]
+        public ActionResult<ServicioDto> GetById(int id)
+        {
+            var servicio = _context.Servicios.Find(id);
 
             if (servicio == null)
-            {
-                // Retornar 404 si no se encontró
                 return NotFound();
-            }
 
-            return Ok(servicio);
+            // Mapeo de la entidad encontrada a DTO
+            var servicioDto = new ServicioDto
+            {
+                Id = servicio.Id,
+                Name = servicio.Name,
+                ServiceDate = servicio.ServiceDate,
+                Cost = servicio.Cost,
+                Status = servicio.Status,
+                ClienteId = servicio.ClienteId
+            };
+
+            return Ok(servicioDto);
         }
 
-        [HttpPost] // POST: api/servicios
-        public ActionResult<Servicio> Create(Servicio servicio)
+        // GET /api/servicios/con-cliente
+        [HttpGet("con-cliente")]
+        public ActionResult<List<ServicioWithClienteDto>> GetServiciosWithCliente()
         {
-            // Validación manual adicional: nombre no vacío.
-            if (string.IsNullOrWhiteSpace(servicio.Name))
+            var servicios = _context.Servicios
+                .Include(s => s.Cliente)
+                .ToList();
+
+            // Mapeo manual de entidades Servicio a DTOs ServicioWithClienteDto
+            var servicioDTOs = servicios.Select(s => new ServicioWithClienteDto
             {
-                return BadRequest("Name of service is required.");
-            }
+                Id = s.Id,
+                Name = s.Name,
+                ServiceDate = s.ServiceDate,
+                Cost = s.Cost,
+                Status = s.Status,
+                ClienteId = s.ClienteId,
+                ClienteName = s.Cliente != null ? s.Cliente.Name : ""
+            }).ToList();
 
-            int newId = _servicios.Any() ? _servicios.Max(s => s.Id) + 1 : 1;
-            servicio.Id = newId;
-
-            _servicios.Add(servicio);
-
-            // Devolver respuesta 201 Created con el recurso creado
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = servicio.Id },
-                servicio
-            );
+            return Ok(servicioDTOs);
         }
 
-        [HttpPut("{id}")] // PUT: api/servicios/5
-        public IActionResult Update(int id, Servicio servicio)
+        // POST: api/servicios
+        [HttpPost]
+        public ActionResult<Servicio> Create([FromBody] CreateServicioDto request)
         {
-            var existing = _servicios.FirstOrDefault(s => s.Id == id);
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("El nombre del servicio es obligatorio.");
 
-            if (existing == null)
+            if (!_context.Clientes.Any(c => c.Id == request.ClienteId))
+                return BadRequest("El cliente indicado no existe.");
+
+            var servicio = new Servicio
             {
+                Name = request.Name,
+                ServiceDate = request.ServiceDate,
+                Cost = request.Cost,
+                Status = request.Status,
+                ClienteId = request.ClienteId
+            };
+
+            _context.Servicios.Add(servicio);
+            _context.SaveChanges();
+
+            return Ok(new { servicio.Id });
+        }
+
+        // PUT: api/servicios/5
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, [FromBody] ServicioDto request)
+        {
+            if (id != request.Id)
+                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
+
+            if (string.IsNullOrWhiteSpace(request.Name))
+                return BadRequest("El nombre del servicio no puede estar vacío.");
+
+            if (!_context.Clientes.Any(c => c.Id == request.ClienteId))
+                return BadRequest("El cliente indicado no existe.");
+
+            var existingServicio = _context.Servicios.Find(id);
+
+            if (existingServicio == null)
                 return NotFound();
-            }
 
-            // Actualizar propiedades (excepto el Id)
-            existing.Name = servicio.Name;
-            existing.ServiceDate = servicio.ServiceDate;
-            existing.Cost = servicio.Cost;
-            existing.Status = servicio.Status;
-            existing.ClienteId = servicio.ClienteId;
+            existingServicio.Name = request.Name;
+            existingServicio.ServiceDate = request.ServiceDate;
+            existingServicio.Cost = request.Cost;
+            existingServicio.Status = request.Status;
+            existingServicio.ClienteId = request.ClienteId;
 
-            // Retornar 204 NoContent indicando que se realizó la operación sin devolver cuerpo.
+            _context.SaveChanges();
+
             return NoContent();
         }
 
-        [HttpDelete("{id}")] // DELETE: api/servicios/5
+        // DELETE: api/servicios/5
+        [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var existing = _servicios.FirstOrDefault(s => s.Id == id);
+            var servicio = _context.Servicios.Find(id);
 
-            if (existing == null)
-            {
+            if (servicio == null)
                 return NotFound();
-            }
 
-            _servicios.Remove(existing);
+            _context.Servicios.Remove(servicio);
+            _context.SaveChanges();
 
-            // Retornamos 204 NoContent para indicar que se eliminó correctamente.
             return NoContent();
         }
     }
