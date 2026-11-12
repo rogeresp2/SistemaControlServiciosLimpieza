@@ -1,4 +1,6 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Entities
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SistemaControlServiciosLimpieza.Api.Models.Entities
 {
     public class Asignacion
     {
@@ -8,6 +10,8 @@
         public int EmpleadoId { get; set; }
         public Empleado? Empleado { get; set; }
         public DateTime AssignmentDate { get; set; }
+
+        [StringLength(30)]
         public string Status { get; set; } = string.Empty;
     }
 }
