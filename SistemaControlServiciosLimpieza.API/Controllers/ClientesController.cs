@@ -3,6 +3,7 @@ using SistemaControlServiciosLimpieza.Api.Models.Entities;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -11,11 +12,12 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     public class ClientesController : ControllerBase
     {
         private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
-
-        public ClientesController(ApplicationDbContext context)
+        private readonly IMapper _mapper;
+        public ClientesController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
             // Nota: No inicializamos lista estática, los datos están en la BD.
+            _mapper = mapper;
         }
 
 
@@ -27,14 +29,16 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             var clientes = _context.Clientes.ToList();
 
             // Mapeo manual de entidades Cliente a DTOs ClienteDto
-            var clienteDtos = clientes.Select(c => new ClienteDto
-            {
-                Id = c.Id,
-                Name = c.Name,
-                Phone = c.Phone,
-                Email = c.Email,
-                IsActive = c.IsActive
-            }).ToList();
+            //var clienteDtos = clientes.Select(c => new ClienteDto
+            //{
+            //    Id = c.Id,
+            //    Name = c.Name,
+            //    Phone = c.Phone,
+            //    Email = c.Email,
+            //    IsActive = c.IsActive
+            //}).ToList();
+
+            var clienteDtos = _mapper.Map<List<ClienteDto>>(clientes);
 
             return Ok(clienteDtos);
         }
@@ -48,15 +52,17 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (cliente == null)
                 return NotFound();
 
-            // Mapeo de la entidad encontrada a DTO
-            var clienteDto = new ClienteDto
-            {
-                Id = cliente.Id,
-                Name = cliente.Name,
-                Phone = cliente.Phone,
-                Email = cliente.Email,
-                IsActive = cliente.IsActive
-            };
+            //// Mapeo de la entidad encontrada a DTO
+            //var clienteDto = new ClienteDto
+            //{
+            //    Id = cliente.Id,
+            //    Name = cliente.Name,
+            //    Phone = cliente.Phone,
+            //    Email = cliente.Email,
+            //    IsActive = cliente.IsActive
+            //};
+
+            var clienteDto = _mapper.Map<ClienteDto>(cliente);
 
             return Ok(clienteDto);
         }
@@ -72,13 +78,16 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
                 return BadRequest("El nombre del cliente es obligatorio.");
             }
 
-            var cliente = new Cliente
-            {
-                Name = request.Name,
-                Phone = request.Phone,
-                Email = request.Email,  
-                IsActive = true,
-            };
+            //var cliente = new Cliente
+            //{
+            //    Name = request.Name,
+            //    Phone = request.Phone,
+            //    Email = request.Email,  
+            //    IsActive = true,
+            //};
+
+            var cliente = _mapper.Map<Cliente>(request);
+            cliente.IsActive = true;
 
             // Preparar entidad Cliente para guardar (la BD asignará el Id automáticamente)
 
@@ -116,11 +125,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
                 return NotFound();
             }
 
-            // Actualizar campos del cliente existente
-            existingCliente.Name = request.Name;
-            existingCliente.Phone = request.Phone;
-            existingCliente.Email = request.Email;
-            existingCliente.IsActive = request.IsActive;
+            //// Actualizar campos del cliente existente
+            //existingCliente.Name = request.Name;
+            //existingCliente.Phone = request.Phone;
+            //existingCliente.Email = request.Email;
+            //existingCliente.IsActive = request.IsActive;
+
+            _mapper.Map(request, existingCliente);
 
             _context.SaveChanges(); // Aplicar cambios en la base de datos (UPDATE)
 

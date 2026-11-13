@@ -3,6 +3,7 @@ using SistemaControlServiciosLimpieza.Api.Models.Entities;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -11,11 +12,12 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     public class EmpleadosController : ControllerBase
     {
         private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
-
-        public EmpleadosController(ApplicationDbContext context)
+        private readonly IMapper _mapper;
+        public EmpleadosController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
             // Nota: No inicializamos lista estática, los datos están en la BD.
+            _mapper = mapper;
         }
 
         // GET: api/empleados
@@ -25,16 +27,18 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             // Recupera los empleados (entidades) de la base de datos
             var empleados = _context.Empleados.ToList();
 
-            // Mapeo manual de entidades Empleado a DTOs EmpleadoDto
-            var empleadoDtos = empleados.Select(e => new EmpleadoDto
-            {
-                Id = e.Id,
-                Name = e.Name,
-                Phone = e.Phone,
-                Email = e.Email,
-                Position = e.Position,
-                IsActive = e.IsActive
-            }).ToList();
+            //// Mapeo manual de entidades Empleado a DTOs EmpleadoDto
+            //var empleadoDtos = empleados.Select(e => new EmpleadoDto
+            //{
+            //    Id = e.Id,
+            //    Name = e.Name,
+            //    Phone = e.Phone,
+            //    Email = e.Email,
+            //    Position = e.Position,
+            //    IsActive = e.IsActive
+            //}).ToList();
+
+            var empleadoDtos = _mapper.Map<List<EmpleadoDto>>(empleados);
 
             return Ok(empleadoDtos);
         }
@@ -48,16 +52,18 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (empleado == null)
                 return NotFound();
 
-            // Mapeo de la entidad encontrada a DTO
-            var empleadoDto = new EmpleadoDto
-            {
-                Id = empleado.Id,
-                Name = empleado.Name,
-                Phone = empleado.Phone,
-                Email = empleado.Email,
-                Position = empleado.Position,
-                IsActive = empleado.IsActive
-            };
+            //// Mapeo de la entidad encontrada a DTO
+            //var empleadoDto = new EmpleadoDto
+            //{
+            //    Id = empleado.Id,
+            //    Name = empleado.Name,
+            //    Phone = empleado.Phone,
+            //    Email = empleado.Email,
+            //    Position = empleado.Position,
+            //    IsActive = empleado.IsActive
+            //};
+            
+            var empleadoDto = _mapper.Map<EmpleadoDto>(empleado);
 
             return Ok(empleadoDto);
         }
@@ -69,14 +75,18 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("El nombre del empleado es obligatorio.");
 
-            var empleado = new Empleado
-            {
-                Name = request.Name,
-                Phone = request.Phone,
-                Email = request.Email,
-                Position = request.Position,
-                IsActive = true
-            };
+            //// Mapeo manual de CreateEmpleadoDto a Empleado
+            //var empleado = new Empleado
+            //{
+            //    Name = request.Name,
+            //    Phone = request.Phone,
+            //    Email = request.Email,
+            //    Position = request.Position,
+            //    IsActive = true
+            //};
+            
+            var empleado = _mapper.Map<Empleado>(request);
+            empleado.IsActive = true;
 
             _context.Empleados.Add(empleado);
             _context.SaveChanges();
@@ -99,11 +109,15 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (existingEmpleado == null)
                 return NotFound();
 
-            existingEmpleado.Name = request.Name;
-            existingEmpleado.Phone = request.Phone;
-            existingEmpleado.Email = request.Email;
-            existingEmpleado.Position = request.Position;
-            existingEmpleado.IsActive = request.IsActive;
+            //// Mapeo manual de los datos del DTO a la entidad existente
+            //existingEmpleado.Name = request.Name;
+            //existingEmpleado.Phone = request.Phone;
+            //existingEmpleado.Email = request.Email;
+            //existingEmpleado.Position = request.Position;
+            //existingEmpleado.IsActive = request.IsActive;
+            
+
+            _mapper.Map(request, existingEmpleado);
 
             _context.SaveChanges();
 

@@ -3,6 +3,7 @@ using SistemaControlServiciosLimpieza.Api.Models.Entities;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -11,10 +12,12 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     public class ServiciosController : ControllerBase
     {
         private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        private readonly IMapper _mapper;
 
-        public ServiciosController(ApplicationDbContext context)
+        public ServiciosController(ApplicationDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
             // Nota: No inicializamos lista estática, los datos están en la BD.
         }
 
@@ -26,15 +29,17 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             var servicios = _context.Servicios.ToList();
 
             // Mapeo manual de entidades Servicio a DTOs ServicioDto
-            var servicioDtos = servicios.Select(s => new ServicioDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                ServiceDate = s.ServiceDate,
-                Cost = s.Cost,
-                Status = s.Status,
-                ClienteId = s.ClienteId
-            }).ToList();
+            // var servicioDtos = servicios.Select(s => new ServicioDto
+            // {
+            //     Id = s.Id,
+            //     Name = s.Name,
+            //     ServiceDate = s.ServiceDate,
+            //     Cost = s.Cost,
+            //     Status = s.Status,
+            //     ClienteId = s.ClienteId
+            // }).ToList();
+
+            var servicioDtos = _mapper.Map<List<ServicioDto>>(servicios);
 
             return Ok(servicioDtos);
         }
@@ -49,15 +54,17 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
                 return NotFound();
 
             // Mapeo de la entidad encontrada a DTO
-            var servicioDto = new ServicioDto
-            {
-                Id = servicio.Id,
-                Name = servicio.Name,
-                ServiceDate = servicio.ServiceDate,
-                Cost = servicio.Cost,
-                Status = servicio.Status,
-                ClienteId = servicio.ClienteId
-            };
+            // var servicioDto = new ServicioDto
+            // {
+            //     Id = servicio.Id,
+            //     Name = servicio.Name,
+            //     ServiceDate = servicio.ServiceDate,
+            //     Cost = servicio.Cost,
+            //     Status = servicio.Status,
+            //     ClienteId = servicio.ClienteId
+            // };
+
+            var servicioDto = _mapper.Map<ServicioDto>(servicio);
 
             return Ok(servicioDto);
         }
@@ -71,16 +78,18 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
                 .ToList();
 
             // Mapeo manual de entidades Servicio a DTOs ServicioWithClienteDto
-            var servicioDTOs = servicios.Select(s => new ServicioWithClienteDto
-            {
-                Id = s.Id,
-                Name = s.Name,
-                ServiceDate = s.ServiceDate,
-                Cost = s.Cost,
-                Status = s.Status,
-                ClienteId = s.ClienteId,
-                ClienteName = s.Cliente != null ? s.Cliente.Name : ""
-            }).ToList();
+            // var servicioDTOs = servicios.Select(s => new ServicioWithClienteDto
+            // {
+            //     Id = s.Id,
+            //     Name = s.Name,
+            //     ServiceDate = s.ServiceDate,
+            //     Cost = s.Cost,
+            //     Status = s.Status,
+            //     ClienteId = s.ClienteId,
+            //     ClienteName = s.Cliente != null ? s.Cliente.Name : ""
+            // }).ToList();
+
+            var servicioDTOs = _mapper.Map<List<ServicioWithClienteDto>>(servicios);
 
             return Ok(servicioDTOs);
         }
@@ -95,14 +104,17 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (!_context.Clientes.Any(c => c.Id == request.ClienteId))
                 return BadRequest("El cliente indicado no existe.");
 
-            var servicio = new Servicio
-            {
-                Name = request.Name,
-                ServiceDate = request.ServiceDate,
-                Cost = request.Cost,
-                Status = request.Status,
-                ClienteId = request.ClienteId
-            };
+            // Mapeo manual de CreateServicioDto a Servicio
+            // var servicio = new Servicio
+            // {
+            //     Name = request.Name,
+            //     ServiceDate = request.ServiceDate,
+            //     Cost = request.Cost,
+            //     Status = request.Status,
+            //     ClienteId = request.ClienteId
+            // };
+
+            var servicio = _mapper.Map<Servicio>(request);
 
             _context.Servicios.Add(servicio);
             _context.SaveChanges();
@@ -128,11 +140,14 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (existingServicio == null)
                 return NotFound();
 
-            existingServicio.Name = request.Name;
-            existingServicio.ServiceDate = request.ServiceDate;
-            existingServicio.Cost = request.Cost;
-            existingServicio.Status = request.Status;
-            existingServicio.ClienteId = request.ClienteId;
+            // Mapeo manual de los datos del DTO a la entidad existente
+            // existingServicio.Name = request.Name;
+            // existingServicio.ServiceDate = request.ServiceDate;
+            // existingServicio.Cost = request.Cost;
+            // existingServicio.Status = request.Status;
+            // existingServicio.ClienteId = request.ClienteId;
+
+            _mapper.Map(request, existingServicio);
 
             _context.SaveChanges();
 
