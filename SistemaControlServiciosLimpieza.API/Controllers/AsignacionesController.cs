@@ -21,7 +21,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/asignaciones
         [HttpGet]
-        public ApiResponse<List<AsignacionDto>> GetAll()
+        public ActionResult<ApiResponse<List<AsignacionDto>>> GetAll()
         {
             // Recupera las asignaciones (entidades) de la base de datos
             // Mapeo de entidades Asignacion a DTOs AsignacionDto utilizando AutoMapper
@@ -32,7 +32,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/asignaciones/{id}
         [HttpGet("{id}")]
-        public ApiResponse<AsignacionDto> GetById(int id)
+        public ActionResult<ApiResponse<AsignacionDto>> GetById(int id)
         {
             // Mapeo de la entidad encontrada a DTO utilizando AutoMapper
             var result = _asignacionService.GetAsignacionById(id);
@@ -42,7 +42,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET /api/asignaciones/con-detalles
         [HttpGet("con-detalles")]
-        public ApiResponse<List<AsignacionWithDetailsDto>> GetAsignacionesWithDetails()
+        public ActionResult<ApiResponse<List<AsignacionWithDetailsDto>>> GetAsignacionesWithDetails()
         {
             // Mapeo de entidades Asignacion a DTOs AsignacionWithDetailsDto utilizando AutoMapper
             var result = _asignacionService.GetAllAsignacionWithDetails();
@@ -52,7 +52,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // POST: api/asignaciones
         [HttpPost]
-        public ApiResponse<int> Create([FromBody] CreateAsignacionDto request)
+        public ActionResult<ApiResponse<int>> Create([FromBody] CreateAsignacionDto request)
         {
             // Mapeo de CreateAsignacionDto a Asignacion utilizando AutoMapper
             // AsignacionService valida, guarda los cambios y la BD genera el Id
@@ -63,7 +63,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // PUT: api/asignaciones/5
         [HttpPut("{id}")]
-        public ApiResponse<bool> Update(int id, [FromBody] AsignacionDto request)
+        public ActionResult<ApiResponse<bool>> Update(int id, [FromBody] AsignacionDto request)
         {
             // Mapeo de los datos del DTO a la entidad utilizando AutoMapper
             // AsignacionService devuelve error si la asignación no existe
@@ -74,7 +74,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // DELETE: api/asignaciones/5
         [HttpDelete("{id}")]
-        public ApiResponse<bool> Delete(int id)
+        public ActionResult<ApiResponse<bool>> Delete(int id)
         {
             var result = _asignacionService.DeleteAsignacion(id);
 
@@ -82,12 +82,12 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         }
 
         // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
-        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        private ActionResult<ApiResponse<T>> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
         {
             if (result.Success)
-                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
+                return StatusCode(successCode, ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message));
 
-            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
+            return StatusCode(errorCode, ApiResponse<T>.ErrorResponse(result.Message, errorCode));
         }
     }
 }

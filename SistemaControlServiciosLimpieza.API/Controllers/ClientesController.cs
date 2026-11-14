@@ -18,7 +18,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/clientes
         [HttpGet]
-        public ApiResponse<List<ClienteDto>> GetAll()
+        public ActionResult<ApiResponse<List<ClienteDto>>> GetAll()
         {
             var result = _clienteService.GetAllCliente();
             return ToApiResponse(result);
@@ -26,7 +26,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/clientes/{id}
         [HttpGet("{id}")]
-        public ApiResponse<ClienteDto> GetById(int id)
+        public ActionResult<ApiResponse<ClienteDto>> GetById(int id)
         {
             var result = _clienteService.GetClienteById(id);
             return ToApiResponse(result, 200, 404);
@@ -34,7 +34,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // POST: api/clientes
         [HttpPost]
-        public ApiResponse<int> Create([FromBody] CreateClienteDto request)
+        public ActionResult<ApiResponse<int>> Create([FromBody] CreateClienteDto request)
         {
             var result = _clienteService.CreateCliente(request);
             return ToApiResponse(result, 201);
@@ -42,7 +42,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // PUT: api/clientes/5
         [HttpPut("{id}")]
-        public ApiResponse<bool> Update(int id, [FromBody] ClienteDto request)
+        public ActionResult<ApiResponse<bool>> Update(int id, [FromBody] ClienteDto request)
         {
             var result = _clienteService.UpdateCliente(id, request);
             return ToApiResponse(result);
@@ -50,19 +50,19 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // DELETE: api/clientes/5
         [HttpDelete("{id}")]
-        public ApiResponse<bool> Delete(int id)
+        public ActionResult<ApiResponse<bool>> Delete(int id)
         {
             var result = _clienteService.DeleteCliente(id);
             return ToApiResponse(result, 200, 404);
         }
 
         // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
-        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        private ActionResult<ApiResponse<T>> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
         {
             if (result.Success)
-                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
+                return StatusCode(successCode, ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message));
 
-            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
+            return StatusCode(errorCode, ApiResponse<T>.ErrorResponse(result.Message, errorCode));
         }
     }
 }
