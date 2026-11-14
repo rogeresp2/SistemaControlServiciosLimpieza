@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SistemaControlServiciosLimpieza.Api.Data;
+using SistemaControlServiciosLimpieza.Infrastructure;
 
 [ApiController]
 [Route("api/[controller]")]
