@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SistemaControlServiciosLimpieza.Domain.Core;
+using System.ComponentModel.DataAnnotations;
 
-namespace SistemaControlServiciosLimpieza.Api.Models.Entities
+namespace SistemaControlServiciosLimpieza.Domain.Entities
 {
-    public class Asignacion
+    public class Asignacion: BaseEntity
     {
-        public int Id { get; set; }
+        //public int Id { get; set; }
         public int ServicioId { get; set; }
         public Servicio? Servicio { get; set; }
         public int EmpleadoId { get; set; }

@@ -1,8 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Api.Data;
-using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Domain.Entities;
+using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
@@ -11,12 +10,14 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     [Route("api/servicios")]
     public class ServiciosController : ControllerBase
     {
-        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        //private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        private readonly UnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public ServiciosController(ApplicationDbContext context, IMapper mapper)
+        public ServiciosController(/*ApplicationDbContext context,*/ UnitOfWork unitOfWork, IMapper mapper)
         {
-            _context = context;
+            //_context = context;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
             // Nota: No inicializamos lista estática, los datos están en la BD.
         }
@@ -26,7 +27,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         public ActionResult<List<ServicioDto>> GetAll()
         {
             // Recupera los servicios (entidades) de la base de datos
-            var servicios = _context.Servicios.ToList();
+            var servicios = _unitOfWork.Servicios.GetAll();
 
             // Mapeo manual de entidades Servicio a DTOs ServicioDto
             // var servicioDtos = servicios.Select(s => new ServicioDto
@@ -48,7 +49,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpGet("{id}")]
         public ActionResult<ServicioDto> GetById(int id)
         {
-            var servicio = _context.Servicios.Find(id);
+            var servicio = _unitOfWork.Servicios.GetById(id);
 
             if (servicio == null)
                 return NotFound();
@@ -73,9 +74,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpGet("con-cliente")]
         public ActionResult<List<ServicioWithClienteDto>> GetServiciosWithCliente()
         {
-            var servicios = _context.Servicios
-                .Include(s => s.Cliente)
-                .ToList();
+            var servicios = _unitOfWork.Servicios.GetAllWithCliente();
 
             // Mapeo manual de entidades Servicio a DTOs ServicioWithClienteDto
             // var servicioDTOs = servicios.Select(s => new ServicioWithClienteDto
@@ -101,7 +100,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("El nombre del servicio es obligatorio.");
 
-            if (!_context.Clientes.Any(c => c.Id == request.ClienteId))
+            if (!_unitOfWork.Clientes.Exists(request.ClienteId))
                 return BadRequest("El cliente indicado no existe.");
 
             // Mapeo manual de CreateServicioDto a Servicio
@@ -116,8 +115,9 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
             var servicio = _mapper.Map<Servicio>(request);
 
-            _context.Servicios.Add(servicio);
-            _context.SaveChanges();
+            // El UnitOfWork guarda los cambios y la BD genera el Id
+            _unitOfWork.Servicios.Create(servicio);
+            _unitOfWork.Complete();
 
             return Ok(new { servicio.Id });
         }
@@ -132,13 +132,8 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("El nombre del servicio no puede estar vacío.");
 
-            if (!_context.Clientes.Any(c => c.Id == request.ClienteId))
+            if (!_unitOfWork.Clientes.Exists(request.ClienteId))
                 return BadRequest("El cliente indicado no existe.");
-
-            var existingServicio = _context.Servicios.Find(id);
-
-            if (existingServicio == null)
-                return NotFound();
 
             // Mapeo manual de los datos del DTO a la entidad existente
             // existingServicio.Name = request.Name;
@@ -147,9 +142,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             // existingServicio.Status = request.Status;
             // existingServicio.ClienteId = request.ClienteId;
 
-            _mapper.Map(request, existingServicio);
+            var servicio = _mapper.Map<Servicio>(request);
 
-            _context.SaveChanges();
+            // El repositorio devuelve false si el servicio no existe
+            if (!_unitOfWork.Servicios.Update(id, servicio))
+                return NotFound();
+
+            _unitOfWork.Complete();
 
             return NoContent();
         }
@@ -158,13 +157,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var servicio = _context.Servicios.Find(id);
+            var servicio = _unitOfWork.Servicios.GetById(id);
 
             if (servicio == null)
                 return NotFound();
 
-            _context.Servicios.Remove(servicio);
-            _context.SaveChanges();
+            _unitOfWork.Servicios.Delete(servicio);
+            _unitOfWork.Complete();
 
             return NoContent();
         }

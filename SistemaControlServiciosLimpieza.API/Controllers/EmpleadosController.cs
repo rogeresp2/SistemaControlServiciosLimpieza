@@ -1,8 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Api.Data;
-using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Domain.Entities;
+using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
@@ -11,11 +10,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     [Route("api/empleados")]
     public class EmpleadosController : ControllerBase
     {
-        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        //private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        private readonly UnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        public EmpleadosController(ApplicationDbContext context, IMapper mapper)
+        public EmpleadosController(/*ApplicationDbContext context,*/ UnitOfWork unitOfWork, IMapper mapper)
         {
-            _context = context;
+            //_context = context;
+            _unitOfWork = unitOfWork;
             // Nota: No inicializamos lista estática, los datos están en la BD.
             _mapper = mapper;
         }
@@ -25,7 +26,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         public ActionResult<List<EmpleadoDto>> GetAll()
         {
             // Recupera los empleados (entidades) de la base de datos
-            var empleados = _context.Empleados.ToList();
+            var empleados = _unitOfWork.Empleados.GetAll();
 
             //// Mapeo manual de entidades Empleado a DTOs EmpleadoDto
             //var empleadoDtos = empleados.Select(e => new EmpleadoDto
@@ -47,7 +48,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpGet("{id}")]
         public ActionResult<EmpleadoDto> GetById(int id)
         {
-            var empleado = _context.Empleados.Find(id);
+            var empleado = _unitOfWork.Empleados.GetById(id);
 
             if (empleado == null)
                 return NotFound();
@@ -62,7 +63,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             //    Position = empleado.Position,
             //    IsActive = empleado.IsActive
             //};
-            
+
             var empleadoDto = _mapper.Map<EmpleadoDto>(empleado);
 
             return Ok(empleadoDto);
@@ -84,12 +85,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             //    Position = request.Position,
             //    IsActive = true
             //};
-            
+
             var empleado = _mapper.Map<Empleado>(request);
             empleado.IsActive = true;
 
-            _context.Empleados.Add(empleado);
-            _context.SaveChanges();
+            // El UnitOfWork guarda los cambios y la BD genera el Id
+            _unitOfWork.Empleados.Create(empleado);
+            _unitOfWork.Complete();
 
             return Ok(new { empleado.Id });
         }
@@ -104,22 +106,20 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (string.IsNullOrWhiteSpace(request.Name))
                 return BadRequest("El nombre del empleado no puede estar vacío.");
 
-            var existingEmpleado = _context.Empleados.Find(id);
-
-            if (existingEmpleado == null)
-                return NotFound();
-
             //// Mapeo manual de los datos del DTO a la entidad existente
             //existingEmpleado.Name = request.Name;
             //existingEmpleado.Phone = request.Phone;
             //existingEmpleado.Email = request.Email;
             //existingEmpleado.Position = request.Position;
             //existingEmpleado.IsActive = request.IsActive;
-            
 
-            _mapper.Map(request, existingEmpleado);
+            var empleado = _mapper.Map<Empleado>(request);
 
-            _context.SaveChanges();
+            // El repositorio devuelve false si el empleado no existe
+            if (!_unitOfWork.Empleados.Update(id, empleado))
+                return NotFound();
+
+            _unitOfWork.Complete();
 
             return NoContent();
         }
@@ -128,13 +128,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var empleado = _context.Empleados.Find(id);
+            var empleado = _unitOfWork.Empleados.GetById(id);
 
             if (empleado == null)
                 return NotFound();
 
-            _context.Empleados.Remove(empleado);
-            _context.SaveChanges();
+            _unitOfWork.Empleados.Delete(empleado);
+            _unitOfWork.Complete();
 
             return NoContent();
         }

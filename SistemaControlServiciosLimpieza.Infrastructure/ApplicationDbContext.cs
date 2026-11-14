@@ -1,7 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace SistemaControlServiciosLimpieza.Api.Data
+namespace SistemaControlServiciosLimpieza.Infrastructure
 {
     public class ApplicationDbContext : DbContext
     {

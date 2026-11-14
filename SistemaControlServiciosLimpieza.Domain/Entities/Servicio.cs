@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SistemaControlServiciosLimpieza.Domain.Core;
+using System.ComponentModel.DataAnnotations;
 
-namespace SistemaControlServiciosLimpieza.Api.Models.Entities
+namespace SistemaControlServiciosLimpieza.Domain.Entities
 {
-    public class Servicio
+    public class Servicio: BaseEntity 
     {
-        public int Id { get; set; }
+        //public int Id { get; set; }
 
         [StringLength(100)]
         public string Name { get; set; } = string.Empty;

@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using SistemaControlServiciosLimpieza.Domain.Core;
+using System.ComponentModel.DataAnnotations;
 
-namespace SistemaControlServiciosLimpieza.Api.Models.Entities
+namespace SistemaControlServiciosLimpieza.Domain.Entities
 {
-    public class Empleado
+    public class Cliente: BaseEntity
     {
-        public int Id { get; set; }
+        //public int Id { get; set; }
 
         [StringLength(100)]
         public string Name { get; set; } = string.Empty;
@@ -14,9 +15,6 @@ namespace SistemaControlServiciosLimpieza.Api.Models.Entities
 
         [StringLength(150)]
         public string? Email { get; set; }
-
-        [StringLength(50)]
-        public string? Position { get; set; }
         public bool IsActive { get; set; } = true;
     }
 }

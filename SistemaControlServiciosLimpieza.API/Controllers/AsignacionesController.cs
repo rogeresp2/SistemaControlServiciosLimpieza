@@ -1,8 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Api.Data;
-using SistemaControlServiciosLimpieza.Api.Models.Entities;
+﻿using SistemaControlServiciosLimpieza.Domain.Entities;
+using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
@@ -11,12 +10,14 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     [Route("api/asignaciones")]
     public class AsignacionesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        //private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
+        private readonly UnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
-        public AsignacionesController(ApplicationDbContext context, IMapper mapper)
+        public AsignacionesController(/*ApplicationDbContext context,*/ UnitOfWork unitOfWork, IMapper mapper)
         {
-            _context = context;
+            //_context = context;
+            _unitOfWork = unitOfWork;
             _mapper = mapper;
             // Nota: No inicializamos lista estática, los datos están en la BD.
         }
@@ -26,7 +27,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         public ActionResult<List<AsignacionDto>> GetAll()
         {
             // Recupera las asignaciones (entidades) de la base de datos
-            var asignaciones = _context.Asignaciones.ToList();
+            var asignaciones = _unitOfWork.Asignaciones.GetAll();
 
             // Mapeo manual de entidades Asignacion a DTOs AsignacionDto
             // var asignacionDtos = asignaciones.Select(a => new AsignacionDto
@@ -48,7 +49,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpGet("{id}")]
         public ActionResult<AsignacionDto> GetById(int id)
         {
-            var asignacion = _context.Asignaciones.Find(id);
+            var asignacion = _unitOfWork.Asignaciones.GetById(id);
 
             if (asignacion == null)
                 return NotFound();
@@ -73,10 +74,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpGet("con-detalles")]
         public ActionResult<List<AsignacionWithDetailsDto>> GetAsignacionesWithDetails()
         {
-            var asignaciones = _context.Asignaciones
-                .Include(a => a.Servicio)
-                .Include(a => a.Empleado)
-                .ToList();
+            var asignaciones = _unitOfWork.Asignaciones.GetAllWithDetails();
 
             // Mapeo manual de entidades Asignacion a DTOs AsignacionWithDetailsDto
             // var asignacionDTOs = asignaciones.Select(a => new AsignacionWithDetailsDto
@@ -100,10 +98,10 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpPost]
         public ActionResult<Asignacion> Create([FromBody] CreateAsignacionDto request)
         {
-            if (!_context.Servicios.Any(s => s.Id == request.ServicioId))
+            if (!_unitOfWork.Servicios.Exists(request.ServicioId))
                 return BadRequest("El servicio indicado no existe.");
 
-            if (!_context.Empleados.Any(e => e.Id == request.EmpleadoId))
+            if (!_unitOfWork.Empleados.Exists(request.EmpleadoId))
                 return BadRequest("El empleado indicado no existe.");
 
             // Mapeo manual de CreateAsignacionDto a Asignacion
@@ -118,8 +116,9 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             // Mapeo de CreateAsignacionDto a Asignacion utilizando AutoMapper
             var asignacion = _mapper.Map<Asignacion>(request);
 
-            _context.Asignaciones.Add(asignacion);
-            _context.SaveChanges();
+            // El UnitOfWork guarda los cambios y la BD genera el Id
+            _unitOfWork.Asignaciones.Create(asignacion);
+            _unitOfWork.Complete();
 
             return Ok(new { asignacion.Id });
         }
@@ -131,16 +130,11 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             if (id != request.Id)
                 return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
 
-            if (!_context.Servicios.Any(s => s.Id == request.ServicioId))
+            if (!_unitOfWork.Servicios.Exists(request.ServicioId))
                 return BadRequest("El servicio indicado no existe.");
 
-            if (!_context.Empleados.Any(e => e.Id == request.EmpleadoId))
+            if (!_unitOfWork.Empleados.Exists(request.EmpleadoId))
                 return BadRequest("El empleado indicado no existe.");
-
-            var existingAsignacion = _context.Asignaciones.Find(id);
-
-            if (existingAsignacion == null)
-                return NotFound();
 
             // Mapeo manual de los datos del DTO a la entidad existente
             // existingAsignacion.ServicioId = request.ServicioId;
@@ -148,10 +142,14 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
             // existingAsignacion.AssignmentDate = request.AssignmentDate;
             // existingAsignacion.Status = request.Status;
 
-            // Mapeo de los datos del DTO a la entidad existente utilizando AutoMapper
-            _mapper.Map(request, existingAsignacion);
+            // Mapeo de los datos del DTO a la entidad utilizando AutoMapper
+            var asignacion = _mapper.Map<Asignacion>(request);
 
-            _context.SaveChanges();
+            // El repositorio devuelve false si la asignación no existe
+            if (!_unitOfWork.Asignaciones.Update(id, asignacion))
+                return NotFound();
+
+            _unitOfWork.Complete();
 
             return NoContent();
         }
@@ -160,13 +158,13 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var asignacion = _context.Asignaciones.Find(id);
+            var asignacion = _unitOfWork.Asignaciones.GetById(id);
 
             if (asignacion == null)
                 return NotFound();
 
-            _context.Asignaciones.Remove(asignacion);
-            _context.SaveChanges();
+            _unitOfWork.Asignaciones.Delete(asignacion);
+            _unitOfWork.Complete();
 
             return NoContent();
         }

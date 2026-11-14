@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using SistemaControlServiciosLimpieza.Api.Models.Dtos;
-using SistemaControlServiciosLimpieza.Api.Models.Entities;
+using SistemaControlServiciosLimpieza.Domain.Entities;
 
 namespace SistemaControlServiciosLimpieza.API.Models
 {

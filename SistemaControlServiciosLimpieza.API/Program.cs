@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using SistemaControlServiciosLimpieza.Api.Data;
+using SistemaControlServiciosLimpieza.Infrastructure;
+using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
 using SistemaControlServiciosLimpieza.API.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Registrar los repositorios
+builder.Services.AddTransient<ClienteRepository>();
+builder.Services.AddTransient<EmpleadoRepository>();
+builder.Services.AddTransient<ServicioRepository>();
+builder.Services.AddTransient<AsignacionRepository>();
+builder.Services.AddTransient<UnitOfWork>();
+
 
 builder.Services.AddControllers();
 
