@@ -1,8 +1,7 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Dtos
+﻿namespace SistemaControlServiciosLimpieza.Application.Dtos
 {
-    public class AsignacionDto
+    public class CreateAsignacionDto
     {
-        public int Id { get; set; }
         public int ServicioId { get; set; }
         public int EmpleadoId { get; set; }
         public DateTime AssignmentDate { get; set; }

@@ -1,4 +1,4 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Dtos
+﻿namespace SistemaControlServiciosLimpieza.Application.Dtos
 {
     // DTO de salida para Asignacion con información de Servicio y Empleado
     public class AsignacionWithDetailsDto

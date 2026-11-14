@@ -1,4 +1,4 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Dtos
+﻿namespace SistemaControlServiciosLimpieza.Application.Dtos
 {
     public class CreateClienteDto
     {

@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaControlServiciosLimpieza.Infrastructure;
 using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
-using SistemaControlServiciosLimpieza.API.Models;
+using SistemaControlServiciosLimpieza.Application.Models;
+using SistemaControlServiciosLimpieza.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,11 @@ builder.Services.AddTransient<EmpleadoRepository>();
 builder.Services.AddTransient<ServicioRepository>();
 builder.Services.AddTransient<AsignacionRepository>();
 builder.Services.AddTransient<UnitOfWork>();
+builder.Services.AddTransient<ClienteService>();
+builder.Services.AddTransient<EmpleadoService>();
+builder.Services.AddTransient<ServicioService>();
+builder.Services.AddTransient<AsignacionService>();
+
 
 
 builder.Services.AddControllers();

@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="17.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
@@ -25,8 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SistemaControlServiciosLimpieza.Domain\SistemaControlServiciosLimpieza.Domain.csproj" />
-    <ProjectReference Include="..\SistemaControlServiciosLimpieza.Infrastructure\SistemaControlServiciosLimpieza.Infrastructure.csproj" />
+    <ProjectReference Include="..\SistemaControlServiciosLimpieza.Application\SistemaControlServiciosLimpieza.Application.csproj" />
   </ItemGroup>
 
 </Project>

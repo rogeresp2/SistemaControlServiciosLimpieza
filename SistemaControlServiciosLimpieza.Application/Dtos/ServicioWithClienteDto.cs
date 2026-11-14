@@ -1,6 +1,7 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Dtos
+﻿namespace SistemaControlServiciosLimpieza.Application.Dtos
 {
-    public class ServicioDto
+    // DTO de salida para Servicio con información de Cliente
+    public class ServicioWithClienteDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -8,5 +9,6 @@
         public decimal Cost { get; set; }
         public string Status { get; set; } = string.Empty;
         public int ClienteId { get; set; }
+        public string ClienteName { get; set; } = string.Empty;
     }
 }
