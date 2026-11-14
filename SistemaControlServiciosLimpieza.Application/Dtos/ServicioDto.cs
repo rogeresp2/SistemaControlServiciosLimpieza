@@ -1,7 +1,8 @@
-﻿namespace SistemaControlServiciosLimpieza.Api.Models.Dtos
+﻿namespace SistemaControlServiciosLimpieza.Application.Dtos
 {
-    public class CreateServicioDto
+    public class ServicioDto
     {
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public DateTime ServiceDate { get; set; }
         public decimal Cost { get; set; }

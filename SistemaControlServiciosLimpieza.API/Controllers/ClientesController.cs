@@ -1,8 +1,7 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Mvc;
-using SistemaControlServiciosLimpieza.Api.Models.Dtos;
-using SistemaControlServiciosLimpieza.Domain.Entities;
-using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
+﻿using Microsoft.AspNetCore.Mvc;
+using SistemaControlServiciosLimpieza.Application.Dtos;
+using SistemaControlServiciosLimpieza.Application.Models;
+using SistemaControlServiciosLimpieza.Application.Services;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -10,103 +9,60 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     [Route("api/clientes")]
     public class ClientesController : ControllerBase
     {
-        //private readonly ClienteRepository _repository;
-        private readonly UnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
+        private readonly ClienteService _clienteService;
 
-        public ClientesController(/*ClienteRepository repository,*/ UnitOfWork unitOfWork, IMapper mapper)
+        public ClientesController(ClienteService clienteService)
         {
-            //_repository = repository;
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            _clienteService = clienteService;
         }
 
         // GET: api/clientes
         [HttpGet]
-        public ActionResult<List<ClienteDto>> GetAll()
+        public ApiResponse<List<ClienteDto>> GetAll()
         {
-            var clientes = _unitOfWork.Clientes.GetAll();
-
-            var clienteDtos = _mapper.Map<List<ClienteDto>>(clientes);
-
-            return Ok(clienteDtos);
+            var result = _clienteService.GetAllCliente();
+            return ToApiResponse(result);
         }
 
         // GET: api/clientes/{id}
         [HttpGet("{id}")]
-        public ActionResult<ClienteDto> GetById(int id)
+        public ApiResponse<ClienteDto> GetById(int id)
         {
-            var cliente = _unitOfWork.Clientes.GetById(id);
-
-            if (cliente == null)
-                return NotFound();
-
-            var clienteDto = _mapper.Map<ClienteDto>(cliente);
-
-            return Ok(clienteDto);
+            var result = _clienteService.GetClienteById(id);
+            return ToApiResponse(result, 200, 404);
         }
 
         // POST: api/clientes
         [HttpPost]
-        public ActionResult<Cliente> Create([FromBody] CreateClienteDto request)
+        public ApiResponse<int> Create([FromBody] CreateClienteDto request)
         {
-            // Validación básica de negocio
-            if (string.IsNullOrWhiteSpace(request.Name))
-            {
-                return BadRequest("El nombre del cliente es obligatorio.");
-            }
-
-            var cliente = _mapper.Map<Cliente>(request);
-            cliente.IsActive = true;
-
-            // El UnitOfWork guarda los cambios y la BD genera el Id
-            _unitOfWork.Clientes.Create(cliente);
-            _unitOfWork.Complete();
-
-            return Ok(new { cliente.Id });
+            var result = _clienteService.CreateCliente(request);
+            return ToApiResponse(result, 201);
         }
 
         // PUT: api/clientes/5
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] ClienteDto request)
+        public ApiResponse<bool> Update(int id, [FromBody] ClienteDto request)
         {
-            if (id != request.Id)
-            {
-                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Name))
-            {
-                return BadRequest("El nombre del cliente no puede estar vacío.");
-            }
-
-            var cliente = _mapper.Map<Cliente>(request);
-
-            // El repositorio devuelve false si el cliente no existe
-            if (!_unitOfWork.Clientes.Update(id, cliente))
-            {
-                return NotFound();
-            }
-            _unitOfWork.Complete();
-
-            return NoContent();
+            var result = _clienteService.UpdateCliente(id, request);
+            return ToApiResponse(result);
         }
 
         // DELETE: api/clientes/5
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public ApiResponse<bool> Delete(int id)
         {
-            var cliente = _unitOfWork.Clientes.GetById(id);
+            var result = _clienteService.DeleteCliente(id);
+            return ToApiResponse(result, 200, 404);
+        }
 
-            if (cliente == null)
-            {
-                return NotFound();
-            }
+        // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
+        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        {
+            if (result.Success)
+                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
 
-            _unitOfWork.Clientes.Delete(cliente);
-            _unitOfWork.Complete();
-
-            return NoContent();
+            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
         }
     }
 }

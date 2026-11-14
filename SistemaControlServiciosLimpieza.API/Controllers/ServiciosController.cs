@@ -1,8 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Domain.Entities;
-using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
-using SistemaControlServiciosLimpieza.Api.Models.Dtos;
-using Microsoft.AspNetCore.Mvc;
-using AutoMapper;
+﻿using Microsoft.AspNetCore.Mvc;
+using SistemaControlServiciosLimpieza.Application.Dtos;
+using SistemaControlServiciosLimpieza.Application.Models;
+using SistemaControlServiciosLimpieza.Application.Services;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -11,161 +10,79 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     public class ServiciosController : ControllerBase
     {
         //private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
-        private readonly UnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
+        private readonly ServicioService _servicioService;
 
-        public ServiciosController(/*ApplicationDbContext context,*/ UnitOfWork unitOfWork, IMapper mapper)
+        public ServiciosController(/*ApplicationDbContext context,*/ ServicioService servicioService)
         {
             //_context = context;
-            _unitOfWork = unitOfWork;
-            _mapper = mapper;
+            _servicioService = servicioService;
             // Nota: No inicializamos lista estática, los datos están en la BD.
         }
 
         // GET: api/servicios
         [HttpGet]
-        public ActionResult<List<ServicioDto>> GetAll()
+        public ApiResponse<List<ServicioDto>> GetAll()
         {
             // Recupera los servicios (entidades) de la base de datos
-            var servicios = _unitOfWork.Servicios.GetAll();
+            var result = _servicioService.GetAllServicio();
 
-            // Mapeo manual de entidades Servicio a DTOs ServicioDto
-            // var servicioDtos = servicios.Select(s => new ServicioDto
-            // {
-            //     Id = s.Id,
-            //     Name = s.Name,
-            //     ServiceDate = s.ServiceDate,
-            //     Cost = s.Cost,
-            //     Status = s.Status,
-            //     ClienteId = s.ClienteId
-            // }).ToList();
-
-            var servicioDtos = _mapper.Map<List<ServicioDto>>(servicios);
-
-            return Ok(servicioDtos);
+            return ToApiResponse(result);
         }
 
         // GET: api/servicios/{id}
         [HttpGet("{id}")]
-        public ActionResult<ServicioDto> GetById(int id)
+        public ApiResponse<ServicioDto> GetById(int id)
         {
-            var servicio = _unitOfWork.Servicios.GetById(id);
+            var result = _servicioService.GetServicioById(id);
 
-            if (servicio == null)
-                return NotFound();
-
-            // Mapeo de la entidad encontrada a DTO
-            // var servicioDto = new ServicioDto
-            // {
-            //     Id = servicio.Id,
-            //     Name = servicio.Name,
-            //     ServiceDate = servicio.ServiceDate,
-            //     Cost = servicio.Cost,
-            //     Status = servicio.Status,
-            //     ClienteId = servicio.ClienteId
-            // };
-
-            var servicioDto = _mapper.Map<ServicioDto>(servicio);
-
-            return Ok(servicioDto);
+            return ToApiResponse(result, 200, 404);
         }
 
         // GET /api/servicios/con-cliente
         [HttpGet("con-cliente")]
-        public ActionResult<List<ServicioWithClienteDto>> GetServiciosWithCliente()
+        public ApiResponse<List<ServicioWithClienteDto>> GetServiciosWithCliente()
         {
-            var servicios = _unitOfWork.Servicios.GetAllWithCliente();
+            var result = _servicioService.GetAllServicioWithCliente();
 
-            // Mapeo manual de entidades Servicio a DTOs ServicioWithClienteDto
-            // var servicioDTOs = servicios.Select(s => new ServicioWithClienteDto
-            // {
-            //     Id = s.Id,
-            //     Name = s.Name,
-            //     ServiceDate = s.ServiceDate,
-            //     Cost = s.Cost,
-            //     Status = s.Status,
-            //     ClienteId = s.ClienteId,
-            //     ClienteName = s.Cliente != null ? s.Cliente.Name : ""
-            // }).ToList();
-
-            var servicioDTOs = _mapper.Map<List<ServicioWithClienteDto>>(servicios);
-
-            return Ok(servicioDTOs);
+            return ToApiResponse(result);
         }
 
         // POST: api/servicios
         [HttpPost]
-        public ActionResult<Servicio> Create([FromBody] CreateServicioDto request)
+        public ApiResponse<int> Create([FromBody] CreateServicioDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
-                return BadRequest("El nombre del servicio es obligatorio.");
+            // ServicioService valida, guarda los cambios y la BD genera el Id
+            var result = _servicioService.CreateServicio(request);
 
-            if (!_unitOfWork.Clientes.Exists(request.ClienteId))
-                return BadRequest("El cliente indicado no existe.");
-
-            // Mapeo manual de CreateServicioDto a Servicio
-            // var servicio = new Servicio
-            // {
-            //     Name = request.Name,
-            //     ServiceDate = request.ServiceDate,
-            //     Cost = request.Cost,
-            //     Status = request.Status,
-            //     ClienteId = request.ClienteId
-            // };
-
-            var servicio = _mapper.Map<Servicio>(request);
-
-            // El UnitOfWork guarda los cambios y la BD genera el Id
-            _unitOfWork.Servicios.Create(servicio);
-            _unitOfWork.Complete();
-
-            return Ok(new { servicio.Id });
+            return ToApiResponse(result, 201);
         }
 
         // PUT: api/servicios/5
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] ServicioDto request)
+        public ApiResponse<bool> Update(int id, [FromBody] ServicioDto request)
         {
-            if (id != request.Id)
-                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
+            // ServicioService devuelve error si el servicio no existe
+            var result = _servicioService.UpdateServicio(id, request);
 
-            if (string.IsNullOrWhiteSpace(request.Name))
-                return BadRequest("El nombre del servicio no puede estar vacío.");
-
-            if (!_unitOfWork.Clientes.Exists(request.ClienteId))
-                return BadRequest("El cliente indicado no existe.");
-
-            // Mapeo manual de los datos del DTO a la entidad existente
-            // existingServicio.Name = request.Name;
-            // existingServicio.ServiceDate = request.ServiceDate;
-            // existingServicio.Cost = request.Cost;
-            // existingServicio.Status = request.Status;
-            // existingServicio.ClienteId = request.ClienteId;
-
-            var servicio = _mapper.Map<Servicio>(request);
-
-            // El repositorio devuelve false si el servicio no existe
-            if (!_unitOfWork.Servicios.Update(id, servicio))
-                return NotFound();
-
-            _unitOfWork.Complete();
-
-            return NoContent();
+            return ToApiResponse(result);
         }
 
         // DELETE: api/servicios/5
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public ApiResponse<bool> Delete(int id)
         {
-            var servicio = _unitOfWork.Servicios.GetById(id);
+            var result = _servicioService.DeleteServicio(id);
 
-            if (servicio == null)
-                return NotFound();
+            return ToApiResponse(result, 200, 404);
+        }
 
-            _unitOfWork.Servicios.Delete(servicio);
-            _unitOfWork.Complete();
+        // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
+        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        {
+            if (result.Success)
+                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
 
-            return NoContent();
+            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
         }
     }
 }

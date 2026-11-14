@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="SistemaControlServiciosLimpieza.API/SistemaControlServiciosLimpieza.API.csproj" Id="0f46e28a-c4d3-4204-9a80-0f893b887ef7" />
+  <Project Path="SistemaControlServiciosLimpieza.Application/SistemaControlServiciosLimpieza.Application.csproj" Id="feae9d4b-a390-4ed2-aad3-d32200f98a61" />
   <Project Path="SistemaControlServiciosLimpieza.Domain/SistemaControlServiciosLimpieza.Domain.csproj" Id="c5ab9d6f-422d-46b2-a292-0806ae432c07" />
   <Project Path="SistemaControlServiciosLimpieza.Infrastructure/SistemaControlServiciosLimpieza.Infrastructure.csproj" Id="626d1ba5-2a99-4111-a254-8aabd8d22477" />
 </Solution>

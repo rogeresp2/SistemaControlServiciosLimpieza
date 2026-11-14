@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
-using SistemaControlServiciosLimpieza.Api.Models.Dtos;
+using SistemaControlServiciosLimpieza.Application.Dtos;
 using SistemaControlServiciosLimpieza.Domain.Entities;
 
-namespace SistemaControlServiciosLimpieza.API.Models
+namespace SistemaControlServiciosLimpieza.Application.Models
 {
     public class MappingProfile : Profile
     {

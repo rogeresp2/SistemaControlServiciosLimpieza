@@ -1,8 +1,7 @@
-﻿using SistemaControlServiciosLimpieza.Domain.Entities;
-using SistemaControlServiciosLimpieza.Infrastructure.Repositories;
-using SistemaControlServiciosLimpieza.Api.Models.Dtos;
-using Microsoft.AspNetCore.Mvc;
-using AutoMapper;
+﻿using Microsoft.AspNetCore.Mvc;
+using SistemaControlServiciosLimpieza.Application.Dtos;
+using SistemaControlServiciosLimpieza.Application.Models;
+using SistemaControlServiciosLimpieza.Application.Services;
 
 namespace SistemaControlServiciosLimpieza.Api.Controllers
 {
@@ -11,132 +10,69 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
     public class EmpleadosController : ControllerBase
     {
         //private readonly ApplicationDbContext _context; // Contexto de BD para acceder a las tablas
-        private readonly UnitOfWork _unitOfWork;
-        private readonly IMapper _mapper;
-        public EmpleadosController(/*ApplicationDbContext context,*/ UnitOfWork unitOfWork, IMapper mapper)
+        private readonly EmpleadoService _empleadoService;
+        public EmpleadosController(/*ApplicationDbContext context,*/ EmpleadoService empleadoService)
         {
             //_context = context;
-            _unitOfWork = unitOfWork;
+            _empleadoService = empleadoService;
             // Nota: No inicializamos lista estática, los datos están en la BD.
-            _mapper = mapper;
         }
 
         // GET: api/empleados
         [HttpGet]
-        public ActionResult<List<EmpleadoDto>> GetAll()
+        public ApiResponse<List<EmpleadoDto>> GetAll()
         {
             // Recupera los empleados (entidades) de la base de datos
-            var empleados = _unitOfWork.Empleados.GetAll();
+            var result = _empleadoService.GetAllEmpleado();
 
-            //// Mapeo manual de entidades Empleado a DTOs EmpleadoDto
-            //var empleadoDtos = empleados.Select(e => new EmpleadoDto
-            //{
-            //    Id = e.Id,
-            //    Name = e.Name,
-            //    Phone = e.Phone,
-            //    Email = e.Email,
-            //    Position = e.Position,
-            //    IsActive = e.IsActive
-            //}).ToList();
-
-            var empleadoDtos = _mapper.Map<List<EmpleadoDto>>(empleados);
-
-            return Ok(empleadoDtos);
+            return ToApiResponse(result);
         }
 
         // GET: api/empleados/{id}
         [HttpGet("{id}")]
-        public ActionResult<EmpleadoDto> GetById(int id)
+        public ApiResponse<EmpleadoDto> GetById(int id)
         {
-            var empleado = _unitOfWork.Empleados.GetById(id);
+            var result = _empleadoService.GetEmpleadoById(id);
 
-            if (empleado == null)
-                return NotFound();
-
-            //// Mapeo de la entidad encontrada a DTO
-            //var empleadoDto = new EmpleadoDto
-            //{
-            //    Id = empleado.Id,
-            //    Name = empleado.Name,
-            //    Phone = empleado.Phone,
-            //    Email = empleado.Email,
-            //    Position = empleado.Position,
-            //    IsActive = empleado.IsActive
-            //};
-
-            var empleadoDto = _mapper.Map<EmpleadoDto>(empleado);
-
-            return Ok(empleadoDto);
+            return ToApiResponse(result, 200, 404);
         }
 
         // POST: api/empleados
         [HttpPost]
-        public ActionResult<Empleado> Create([FromBody] CreateEmpleadoDto request)
+        public ApiResponse<int> Create([FromBody] CreateEmpleadoDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Name))
-                return BadRequest("El nombre del empleado es obligatorio.");
+            // El servicio valida, guarda los cambios y la BD genera el Id
+            var result = _empleadoService.CreateEmpleado(request);
 
-            //// Mapeo manual de CreateEmpleadoDto a Empleado
-            //var empleado = new Empleado
-            //{
-            //    Name = request.Name,
-            //    Phone = request.Phone,
-            //    Email = request.Email,
-            //    Position = request.Position,
-            //    IsActive = true
-            //};
-
-            var empleado = _mapper.Map<Empleado>(request);
-            empleado.IsActive = true;
-
-            // El UnitOfWork guarda los cambios y la BD genera el Id
-            _unitOfWork.Empleados.Create(empleado);
-            _unitOfWork.Complete();
-
-            return Ok(new { empleado.Id });
+            return ToApiResponse(result, 201);
         }
 
         // PUT: api/empleados/5
         [HttpPut("{id}")]
-        public IActionResult Update(int id, [FromBody] EmpleadoDto request)
+        public ApiResponse<bool> Update(int id, [FromBody] EmpleadoDto request)
         {
-            if (id != request.Id)
-                return BadRequest("El ID de la URL no coincide con el ID del cuerpo de la solicitud.");
+            // El servicio devuelve error si el empleado no existe
+            var result = _empleadoService.UpdateEmpleado(id, request);
 
-            if (string.IsNullOrWhiteSpace(request.Name))
-                return BadRequest("El nombre del empleado no puede estar vacío.");
-
-            //// Mapeo manual de los datos del DTO a la entidad existente
-            //existingEmpleado.Name = request.Name;
-            //existingEmpleado.Phone = request.Phone;
-            //existingEmpleado.Email = request.Email;
-            //existingEmpleado.Position = request.Position;
-            //existingEmpleado.IsActive = request.IsActive;
-
-            var empleado = _mapper.Map<Empleado>(request);
-
-            // El repositorio devuelve false si el empleado no existe
-            if (!_unitOfWork.Empleados.Update(id, empleado))
-                return NotFound();
-
-            _unitOfWork.Complete();
-
-            return NoContent();
+            return ToApiResponse(result);
         }
 
         // DELETE: api/empleados/5
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public ApiResponse<bool> Delete(int id)
         {
-            var empleado = _unitOfWork.Empleados.GetById(id);
+            var result = _empleadoService.DeleteEmpleado(id);
 
-            if (empleado == null)
-                return NotFound();
+            return ToApiResponse(result, 200, 404);
+        }
 
-            _unitOfWork.Empleados.Delete(empleado);
-            _unitOfWork.Complete();
+        // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
+        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        {
+            if (result.Success)
+                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
 
-            return NoContent();
+            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
         }
     }
 }
