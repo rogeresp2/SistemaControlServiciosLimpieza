@@ -20,7 +20,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/empleados
         [HttpGet]
-        public ApiResponse<List<EmpleadoDto>> GetAll()
+        public ActionResult<ApiResponse<List<EmpleadoDto>>> GetAll()
         {
             // Recupera los empleados (entidades) de la base de datos
             var result = _empleadoService.GetAllEmpleado();
@@ -30,7 +30,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // GET: api/empleados/{id}
         [HttpGet("{id}")]
-        public ApiResponse<EmpleadoDto> GetById(int id)
+        public ActionResult<ApiResponse<EmpleadoDto>> GetById(int id)
         {
             var result = _empleadoService.GetEmpleadoById(id);
 
@@ -39,7 +39,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // POST: api/empleados
         [HttpPost]
-        public ApiResponse<int> Create([FromBody] CreateEmpleadoDto request)
+        public ActionResult<ApiResponse<int>> Create([FromBody] CreateEmpleadoDto request)
         {
             // El servicio valida, guarda los cambios y la BD genera el Id
             var result = _empleadoService.CreateEmpleado(request);
@@ -49,7 +49,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // PUT: api/empleados/5
         [HttpPut("{id}")]
-        public ApiResponse<bool> Update(int id, [FromBody] EmpleadoDto request)
+        public ActionResult<ApiResponse<bool>> Update(int id, [FromBody] EmpleadoDto request)
         {
             // El servicio devuelve error si el empleado no existe
             var result = _empleadoService.UpdateEmpleado(id, request);
@@ -59,7 +59,7 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
 
         // DELETE: api/empleados/5
         [HttpDelete("{id}")]
-        public ApiResponse<bool> Delete(int id)
+        public ActionResult<ApiResponse<bool>> Delete(int id)
         {
             var result = _empleadoService.DeleteEmpleado(id);
 
@@ -67,12 +67,12 @@ namespace SistemaControlServiciosLimpieza.Api.Controllers
         }
 
         // Convierte el resultado del servicio en la respuesta del API, agregando el código HTTP
-        private static ApiResponse<T> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
+        private ActionResult<ApiResponse<T>> ToApiResponse<T>(ServiceResult<T> result, int successCode = 200, int errorCode = 400)
         {
             if (result.Success)
-                return ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message);
+                return StatusCode(successCode, ApiResponse<T>.SuccessResponse(result.Data, successCode, result.Message));
 
-            return ApiResponse<T>.ErrorResponse(result.Message, errorCode);
+            return StatusCode(errorCode, ApiResponse<T>.ErrorResponse(result.Message, errorCode));
         }
     }
 }
